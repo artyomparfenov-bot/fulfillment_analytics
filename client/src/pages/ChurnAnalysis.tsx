@@ -288,13 +288,13 @@ export default function ChurnAnalysis() {
           {/* High risk partners */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">
-              Партнёры с высоким риском churn ({analysis.highRisk.length})
+              Партнеры с высоким риском churn ({analysis.highRisk.length})
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Партнёр</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Партнер</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Направление</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Риск</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Заказы</th>

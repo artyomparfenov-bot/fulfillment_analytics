@@ -75,7 +75,11 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
   const partnerMap = new Map<string, OrderRecord[]>();
   
   records.forEach(record => {
-    const key = `${record["Партнёр"]}_${record["Направление (расчёт)"]}`;
+    // Skip records with empty or undefined partner names
+    if (!record["Партнер"]) {
+      return;
+    }
+    const key = `${record["Партнер"]}_${record["Направление (расчёт)"]}`;
     if (!partnerMap.has(key)) {
       partnerMap.set(key, []);
     }
@@ -86,7 +90,7 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
   const now = new Date();
   
   partnerMap.forEach((partnerRecords, key) => {
-    const partner = partnerRecords[0]["Партнёр"];
+    const partner = partnerRecords[0]["Партнер"];
     const direction = partnerRecords[0]["Направление (расчёт)"];
     
     // Sort by date
@@ -230,7 +234,7 @@ export function calculateSKUStats(records: OrderRecord[]): SKUStats[] {
   const skuMap = new Map<string, OrderRecord[]>();
   
   records.forEach(record => {
-    const key = `${record["Артикул"]}_${record["Партнёр"]}_${record["Направление (расчёт)"]}`;
+    const key = `${record["Артикул"]}_${record["Партнер"]}_${record["Направление (расчёт)"]}`;
     if (!skuMap.has(key)) {
       skuMap.set(key, []);
     }
@@ -242,7 +246,7 @@ export function calculateSKUStats(records: OrderRecord[]): SKUStats[] {
   
   skuMap.forEach((skuRecords, key) => {
     const sku = skuRecords[0]["Артикул"];
-    const partner = skuRecords[0]["Партнёр"];
+    const partner = skuRecords[0]["Партнер"];
     const direction = skuRecords[0]["Направление (расчёт)"];
     
     const sortedRecords = skuRecords.sort((a, b) => 
@@ -326,12 +330,12 @@ export function calculateDirectionStats(records: OrderRecord[]): DirectionStats[
   const stats: DirectionStats[] = [];
   
   directionMap.forEach((directionRecords, direction) => {
-    const partners = new Set(directionRecords.map(r => r["Партнёр"]));
+    const partners = new Set(directionRecords.map(r => r["Партнер"]));
     const skus = new Set(directionRecords.map(r => r["Артикул"]));
     
     const ordersPerPartner: number[] = [];
     partners.forEach(partner => {
-      const partnerOrders = directionRecords.filter(r => r["Партнёр"] === partner);
+      const partnerOrders = directionRecords.filter(r => r["Партнер"] === partner);
       ordersPerPartner.push(partnerOrders.length);
     });
     
@@ -355,19 +359,15 @@ export function analyzeSuccessPatterns(partnerStats: PartnerStats[]): {
   successful: ChurnPattern;
   unsuccessful: ChurnPattern;
 } {
-  // Define successful partners: active, stable, diverse
-  const successful = partnerStats.filter(p => 
-    p.isActive && 
-    p.churnRisk < 30 && 
-    p.totalOrders > 20 &&
-    p.uniqueSKU >= 3
-  );
+  // Sort by churn risk
+  const sorted = [...partnerStats].sort((a, b) => a.churnRisk - b.churnRisk);
   
-  const unsuccessful = partnerStats.filter(p => 
-    !p.isActive || 
-    p.churnRisk > 60 ||
-    p.daysSinceLastOrder > 60
-  );
+  // Take bottom 30% as successful, top 30% as unsuccessful
+  const successfulCount = Math.max(1, Math.floor(sorted.length * 0.3));
+  const unsuccessfulCount = Math.max(1, Math.floor(sorted.length * 0.3));
+  
+  const successful = sorted.slice(0, successfulCount);
+  const unsuccessful = sorted.slice(-unsuccessfulCount);
   
   const calculatePattern = (partners: PartnerStats[]): ChurnPattern => {
     if (partners.length === 0) {

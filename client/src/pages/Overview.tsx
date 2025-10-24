@@ -43,10 +43,15 @@ export default function Overview() {
   const partnerStats = calculatePartnerStats(filteredData);
   const directionStats = calculateDirectionStats(filteredData);
   
+  // Calculate stats from ALL data for total partners
+  const allPartnerStats = calculatePartnerStats(filterByDirection(allData, direction));
+  const totalPartners = allPartnerStats.length;
+  const activePartners = allPartnerStats.filter(p => p.isActive).length;
+  const partnersAtRisk = allPartnerStats.filter(p => p.churnRisk > 50).length;
+  
+  // Calculate stats from filtered data
   const totalOrders = filteredData.length;
-  const totalPartners = new Set(filteredData.map(r => r["Партнёр"])).size;
   const totalSKU = new Set(filteredData.map(r => r["Артикул"])).size;
-  const partnersAtRisk = partnerStats.filter(p => p.churnRisk > 50).length;
   
   const COLORS = ['#8b5cf6', '#6366f1', '#3b82f6', '#06b6d4', '#10b981'];
   
@@ -79,21 +84,21 @@ export default function Overview() {
             />
             <StatCard
               title="Активных партнёров"
-              value={totalPartners}
+              value={activePartners}
               icon={Users}
-              subtitle={`${partnerStats.filter(p => p.isActive).length} активных`}
+              subtitle={`${totalPartners} всего партнёров`}
             />
             <StatCard
               title="Уникальных SKU"
               value={totalSKU}
               icon={TrendingUp}
-              subtitle={`${(totalSKU / totalPartners).toFixed(1)} SKU/партнёр`}
+              subtitle={`${totalPartners > 0 ? (totalSKU / totalPartners).toFixed(1) : '0'} SKU/партнёр`}
             />
             <StatCard
-              title="Партнёры в зоне риска"
+              title="Партнеры в зоне риска"
               value={partnersAtRisk}
               icon={AlertTriangle}
-              subtitle={`${((partnersAtRisk / totalPartners) * 100).toFixed(0)}% от общего числа`}
+              subtitle={`${totalPartners > 0 ? ((partnersAtRisk / totalPartners) * 100).toFixed(0) : '0'}% от общего числа`}
             />
           </div>
           
@@ -164,7 +169,7 @@ export default function Overview() {
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Направление</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Заказы</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Партнёры</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Партнеры</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">SKU</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ср. заказов/партнёр</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Медиана заказов</th>

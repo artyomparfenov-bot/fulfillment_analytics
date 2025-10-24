@@ -1,5 +1,5 @@
 export interface OrderRecord {
-  "Партнёр": string;
+  "Партнер": string;
   "№ заказа ДС": string;
   "ID заказа": string;
   "Тип заказа": string;

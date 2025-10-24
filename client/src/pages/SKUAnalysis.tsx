@@ -113,7 +113,7 @@ export default function SKUAnalysis() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">SKU</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Партнёр</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Партнер</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Направление</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Заказы</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ср. заказов/день</th>
@@ -180,7 +180,7 @@ export default function SKUAnalysis() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">SKU</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Партнёр</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Партнер</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Направление</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Заказы</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Медиана заказов/день</th>

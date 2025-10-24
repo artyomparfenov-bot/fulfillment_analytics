@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   
   const navItems = [
     { path: '/', icon: BarChart3, label: 'Обзор' },
-    { path: '/partners', icon: Users, label: 'Партнёры' },
+    { path: '/partners', icon: Users, label: 'Партнеры' },
     { path: '/sku', icon: Package, label: 'SKU' },
     { path: '/churn', icon: TrendingDown, label: 'Churn Analysis' },
   ];

@@ -36,7 +36,7 @@ export default function Partners() {
   
   const filteredPartners = useMemo(() => {
     return partnerStats.filter(p => 
-      p.partner.toLowerCase().includes(searchQuery.toLowerCase())
+      p.partner && p.partner.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [partnerStats, searchQuery]);
   
@@ -81,7 +81,7 @@ export default function Partners() {
           <div className="w-1/2 border-r border-border overflow-auto">
             <div className="p-6 space-y-4">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Партнёры</h2>
+                <h2 className="text-2xl font-bold text-foreground">Партнеры</h2>
                 <p className="text-muted-foreground mt-1">
                   Анализ активности и риски churn
                 </p>
@@ -98,7 +98,11 @@ export default function Partners() {
               </div>
               
               <div className="space-y-3">
-                {filteredPartners.map((partner, index) => (
+                {filteredPartners.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>Партнеры не найдены</p>
+                  </div>
+                ) : filteredPartners.map((partner, index) => (
                   <Card
                     key={index}
                     className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
