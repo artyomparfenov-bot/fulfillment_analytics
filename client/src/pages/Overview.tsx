@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import FilterBar from '@/components/FilterBar';
 import StatCard from '@/components/StatCard';
@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Package, Users, TrendingUp, AlertTriangle } from 'lucide-react';
 import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats, calculateDirectionStats } from '@/lib/dataProcessor';
+import { calculateBusinessMetrics, calculateDetailedDirectionStats, calculateSKUMetrics } from '@/lib/advancedMetrics';
 import type { OrderRecord, TimeRange } from '@/lib/types';
 
 export default function Overview() {
@@ -25,6 +26,29 @@ export default function Overview() {
       setLoading(false);
     });
   }, []);
+  
+  // Calculate advanced metrics (must be before conditional return)
+  const businessMetrics = useMemo(() => {
+    if (allData.length === 0) return {
+      retentionRate: 0,
+      churnRate: 0,
+      momGrowth: 0,
+      concentrationRisk: 0,
+      healthScore: 0,
+      avgOrdersPerActivePartner: 0
+    };
+    return calculateBusinessMetrics(filterByDirection(allData, direction), timeRange.days || 30);
+  }, [allData, direction, timeRange]);
+  
+  const detailedDirections = useMemo(() => {
+    if (allData.length === 0) return [];
+    return calculateDetailedDirectionStats(filterByDirection(allData, direction), timeRange.days || 30);
+  }, [allData, direction, timeRange]);
+  
+  const skuMetrics = useMemo(() => {
+    if (allData.length === 0) return [];
+    return calculateSKUMetrics(filterByDirection(allData, direction));
+  }, [allData, direction]);
   
   if (loading) {
     return (
@@ -109,6 +133,42 @@ export default function Overview() {
             />
           </div>
           
+          {/* Business Health Metrics */}
+          <Card className="p-6 border-primary/20 bg-primary/5">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Business Health Score</h3>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Health Score</p>
+                <p className="text-3xl font-bold" style={{ color: businessMetrics.healthScore >= 70 ? '#22c55e' : businessMetrics.healthScore >= 50 ? '#eab308' : '#ef4444' }}>
+                  {businessMetrics.healthScore.toFixed(0)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">из 100</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Retention Rate</p>
+                <p className="text-2xl font-bold text-foreground">{businessMetrics.retentionRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground mt-1">удержание клиентов</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Churn Rate</p>
+                <p className="text-2xl font-bold text-foreground">{businessMetrics.churnRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground mt-1">отток клиентов</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">MoM Growth</p>
+                <p className="text-2xl font-bold" style={{ color: businessMetrics.momGrowth >= 0 ? '#22c55e' : '#ef4444' }}>
+                  {businessMetrics.momGrowth >= 0 ? '+' : ''}{businessMetrics.momGrowth.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">рост заказов</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Concentration Risk</p>
+                <p className="text-2xl font-bold text-foreground">{businessMetrics.concentrationRisk.toFixed(0)}%</p>
+                <p className="text-xs text-muted-foreground mt-1">заказы от топ-20%</p>
+              </div>
+            </div>
+          </Card>
+          
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6">
@@ -167,7 +227,7 @@ export default function Overview() {
             </Card>
           </div>
           
-          {/* Direction details */}
+          {/* Detailed Direction Stats */}
           <Card className="p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">Детальная статистика по направлениям</h3>
             <div className="overflow-x-auto">
@@ -177,20 +237,63 @@ export default function Overview() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Направление</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Заказы</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Партнеры</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">SKU</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Активные</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Churned</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Retention</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Churn Rate</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ср. заказов/партнёр</th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Медиана заказов</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {directionStats.map((stat, index) => (
-                    <tr key={index} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="py-3 px-4 font-medium text-foreground">{stat.direction}</td>
+                  {detailedDirections.map((stat, index) => (
+                    <tr key={index} className={`border-b border-border/50 hover:bg-muted/30 ${stat.subType ? 'bg-muted/10' : ''}`}>
+                      <td className="py-3 px-4 font-medium text-foreground">
+                        {stat.subType ? (
+                          <span className="ml-4 text-sm">└─ {stat.subType}</span>
+                        ) : (
+                          stat.direction
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-right text-foreground">{stat.totalOrders.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right text-foreground">{stat.totalPartners}</td>
-                      <td className="py-3 px-4 text-right text-foreground">{stat.totalSKU}</td>
+                      <td className="py-3 px-4 text-right text-green-500">{stat.activePartners}</td>
+                      <td className="py-3 px-4 text-right text-red-400">{stat.churnedPartners}</td>
+                      <td className="py-3 px-4 text-right text-foreground">{stat.retentionRate.toFixed(1)}%</td>
+                      <td className="py-3 px-4 text-right text-foreground">{stat.churnRate.toFixed(1)}%</td>
                       <td className="py-3 px-4 text-right text-foreground">{stat.avgOrdersPerPartner.toFixed(1)}</td>
-                      <td className="py-3 px-4 text-right text-foreground">{stat.medianOrdersPerPartner.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+          
+          {/* SKU Metrics Over Time */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Динамика SKU по месяцам</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Месяц</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Активные SKU</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Новые SKU</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Churned SKU</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Всего SKU</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ср. заказов/SKU</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Концентрация топ-20%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {skuMetrics.slice(-12).map((metric, index) => (
+                    <tr key={index} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="py-3 px-4 font-medium text-foreground">{metric.month}</td>
+                      <td className="py-3 px-4 text-right text-foreground">{metric.activeSKU}</td>
+                      <td className="py-3 px-4 text-right text-green-500">+{metric.newSKU}</td>
+                      <td className="py-3 px-4 text-right text-red-400">{metric.churnedSKU}</td>
+                      <td className="py-3 px-4 text-right text-muted-foreground">{metric.totalSKU}</td>
+                      <td className="py-3 px-4 text-right text-foreground">{metric.avgOrdersPerSKU.toFixed(1)}</td>
+                      <td className="py-3 px-4 text-right text-foreground">{metric.topSKUConcentration.toFixed(0)}%</td>
                     </tr>
                   ))}
                 </tbody>
