@@ -31,11 +31,14 @@ export default function ChurnAnalysis() {
     const partnerStats = calculatePartnerStats(filteredData);
     const patterns = analyzeSuccessPatterns(partnerStats);
     
-    const highRisk = partnerStats.filter(p => p.churnRisk >= 70);
-    const mediumRisk = partnerStats.filter(p => p.churnRisk >= 40 && p.churnRisk < 70);
-    const lowRisk = partnerStats.filter(p => p.churnRisk < 40);
+    const churned = partnerStats.filter(p => p.isChurned);
+    const activePartners = partnerStats.filter(p => !p.isChurned);
+    const highRisk = activePartners.filter(p => p.churnRisk >= 70);
+    const mediumRisk = activePartners.filter(p => p.churnRisk >= 40 && p.churnRisk < 70);
+    const lowRisk = activePartners.filter(p => p.churnRisk < 40);
     
     const riskDistribution = [
+      { name: 'Churned', value: churned.length, fill: '#7f1d1d' },
       { name: 'Высокий риск', value: highRisk.length, fill: '#ef4444' },
       { name: 'Средний риск', value: mediumRisk.length, fill: '#eab308' },
       { name: 'Низкий риск', value: lowRisk.length, fill: '#22c55e' }
@@ -51,6 +54,7 @@ export default function ChurnAnalysis() {
     return {
       partnerStats,
       patterns,
+      churned,
       highRisk,
       mediumRisk,
       lowRisk,
@@ -92,7 +96,18 @@ export default function ChurnAnalysis() {
           </div>
           
           {/* Risk overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="p-6 border-red-800/30 bg-red-900/10">
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <h3 className="font-semibold text-foreground">Churned</h3>
+              </div>
+              <p className="text-3xl font-bold text-red-400">{analysis.churned.length}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {((analysis.churned.length / analysis.partnerStats.length) * 100).toFixed(0)}% партнёров
+              </p>
+            </Card>
+            
             <Card className="p-6 border-red-500/20 bg-red-500/5">
               <div className="flex items-center gap-3 mb-2">
                 <AlertTriangle className="w-5 h-5 text-red-500" />

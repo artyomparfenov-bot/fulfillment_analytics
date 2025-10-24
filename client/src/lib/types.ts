@@ -36,6 +36,7 @@ export interface PartnerStats {
   firstOrderDate: Date;
   daysSinceLastOrder: number;
   isActive: boolean;
+  isChurned: boolean; // true if no orders in 60+ days
   churnRisk: number; // 0-100
   alerts: Alert[];
 }

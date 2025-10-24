@@ -59,9 +59,10 @@ export default function Partners() {
     return 'text-green-500';
   };
   
-  const getRiskBadge = (risk: number) => {
-    if (risk >= 70) return <Badge variant="destructive">Высокий риск</Badge>;
-    if (risk >= 40) return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Средний риск</Badge>;
+  const getRiskBadge = (partner: PartnerStats) => {
+    if (partner.isChurned) return <Badge variant="destructive" className="bg-red-600/20 text-red-400 border-red-600/30">Churned</Badge>;
+    if (partner.churnRisk >= 70) return <Badge variant="destructive">Высокий риск</Badge>;
+    if (partner.churnRisk >= 40) return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Средний риск</Badge>;
     return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Низкий риск</Badge>;
   };
   
@@ -117,7 +118,7 @@ export default function Partners() {
                         <h3 className="font-semibold text-foreground truncate">{partner.partner}</h3>
                         <p className="text-sm text-muted-foreground">{partner.direction}</p>
                       </div>
-                      {getRiskBadge(partner.churnRisk)}
+                      {getRiskBadge(partner)}
                     </div>
                     
                     <div className="grid grid-cols-3 gap-2 text-sm mt-3">
@@ -158,7 +159,7 @@ export default function Partners() {
                   <h2 className="text-2xl font-bold text-foreground">{selectedPartner.partner}</h2>
                   <p className="text-muted-foreground mt-1">{selectedPartner.direction}</p>
                   <div className="mt-3">
-                    {getRiskBadge(selectedPartner.churnRisk)}
+                    {getRiskBadge(selectedPartner)}
                   </div>
                 </div>
                 

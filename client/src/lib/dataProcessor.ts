@@ -132,6 +132,9 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
     // Determine if active (ordered in last 30 days)
     const isActive = daysSinceLastOrder <= 30;
     
+    // Determine if churned (no orders in 60+ days)
+    const isChurned = daysSinceLastOrder > 60;
+    
     // Calculate alerts and churn risk
     const alerts: Alert[] = [];
     let churnRisk = 0;
@@ -197,7 +200,16 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
     }
     
     // Check for inactivity
-    if (daysSinceLastOrder > 30) {
+    if (daysSinceLastOrder > 60) {
+      alerts.push({
+        type: 'partner',
+        severity: 'high',
+        message: `Клиент отвалился (churned): нет заказов ${daysSinceLastOrder} дней`,
+        metric: 'churned',
+        value: daysSinceLastOrder
+      });
+      churnRisk = 100; // Maximum risk for churned clients
+    } else if (daysSinceLastOrder > 30) {
       alerts.push({
         type: 'partner',
         severity: 'high',
@@ -222,6 +234,7 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
       firstOrderDate,
       daysSinceLastOrder,
       isActive,
+      isChurned,
       churnRisk: Math.min(100, churnRisk),
       alerts
     });
@@ -359,8 +372,11 @@ export function analyzeSuccessPatterns(partnerStats: PartnerStats[]): {
   successful: ChurnPattern;
   unsuccessful: ChurnPattern;
 } {
+  // Only analyze active partners (exclude churned)
+  const activePartners = partnerStats.filter(p => !p.isChurned);
+  
   // Sort by churn risk
-  const sorted = [...partnerStats].sort((a, b) => a.churnRisk - b.churnRisk);
+  const sorted = [...activePartners].sort((a, b) => a.churnRisk - b.churnRisk);
   
   // Take bottom 30% as successful, top 30% as unsuccessful
   const successfulCount = Math.max(1, Math.floor(sorted.length * 0.3));

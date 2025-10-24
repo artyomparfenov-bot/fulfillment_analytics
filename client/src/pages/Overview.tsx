@@ -47,7 +47,8 @@ export default function Overview() {
   const allPartnerStats = calculatePartnerStats(filterByDirection(allData, direction));
   const totalPartners = allPartnerStats.length;
   const activePartners = allPartnerStats.filter(p => p.isActive).length;
-  const partnersAtRisk = allPartnerStats.filter(p => p.churnRisk > 50).length;
+  const churnedPartners = allPartnerStats.filter(p => p.isChurned).length;
+  const partnersAtRisk = allPartnerStats.filter(p => p.churnRisk > 50 && !p.isChurned).length;
   
   // Calculate stats from filtered data
   const totalOrders = filteredData.length;
@@ -75,7 +76,7 @@ export default function Overview() {
           </div>
           
           {/* Key metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <StatCard
               title="Всего заказов"
               value={totalOrders.toLocaleString()}
@@ -99,6 +100,12 @@ export default function Overview() {
               value={partnersAtRisk}
               icon={AlertTriangle}
               subtitle={`${totalPartners > 0 ? ((partnersAtRisk / totalPartners) * 100).toFixed(0) : '0'}% от общего числа`}
+            />
+            <StatCard
+              title="Отвалившиеся (Churned)"
+              value={churnedPartners}
+              icon={AlertTriangle}
+              subtitle={`${totalPartners > 0 ? ((churnedPartners / totalPartners) * 100).toFixed(0) : '0'}% от общего числа`}
             />
           </div>
           
