@@ -8,14 +8,17 @@ import Overview from "./pages/Overview";
 import Partners from "./pages/Partners";
 import SKUAnalysis from "./pages/SKUAnalysis";
 import ChurnAnalysis from "./pages/ChurnAnalysis";
+import Alerts from "./pages/Alerts";
 
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Overview} />
       <Route path="/partners" component={Partners} />
       <Route path="/sku" component={SKUAnalysis} />
       <Route path="/churn" component={ChurnAnalysis} />
+      <Route path="/alerts" component={Alerts} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
