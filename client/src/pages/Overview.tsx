@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import FilterBar from '@/components/FilterBar';
 import StatCard from '@/components/StatCard';
@@ -7,6 +7,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Package, Users, TrendingUp, AlertTriangle } from 'lucide-react';
 import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats, calculateDirectionStats } from '@/lib/dataProcessor';
 import { calculateBusinessMetrics, calculateDetailedDirectionStats, calculateSKUMetrics } from '@/lib/advancedMetrics';
+import { generateTimeSeriesData, analyzeClientCohorts, segmentClientsByAge, findTopBottomPerformers } from '@/lib/overviewAnalytics';
+import TimeSeriesChart from '@/components/TimeSeriesChart';
+import ClientSegmentChart from '@/components/ClientSegmentChart';
+import ClientCohortChart from '@/components/ClientCohortChart';
+import TopBottomPerformersChart from '@/components/TopBottomPerformersChart';
 import type { OrderRecord, TimeRange } from '@/lib/types';
 
 export default function Overview() {
@@ -299,6 +304,38 @@ export default function Overview() {
                 </tbody>
               </table>
             </div>
+          </Card>
+          
+          {/* Time Series Charts */}
+          <Card className="p-6">
+            <TimeSeriesChart 
+              data={generateTimeSeriesData(filterByDirection(allData, direction), 'month')}
+              title="Заказы по направлениям (по месяцам)"
+            />
+          </Card>
+          
+          {/* Client Segment Chart */}
+          <Card className="p-6">
+            <ClientSegmentChart
+              data={segmentClientsByAge(filterByDirection(allData, direction), direction === 'all' ? 'all' : direction)}
+              title="Заказы от новых (0-30 дней) и текущих (31+ дней) клиентов"
+            />
+          </Card>
+          
+          {/* Client Cohort Chart */}
+          <Card className="p-6">
+            <ClientCohortChart
+              data={analyzeClientCohorts(filterByDirection(allData, direction), new Set())}
+              title="Динамика новых и отвалившихся клиентов по месяцам"
+            />
+          </Card>
+          
+          {/* Top/Bottom Performers */}
+          <Card className="p-6">
+            {(() => {
+              const { top, bottom } = findTopBottomPerformers(filterByDirection(allData, direction), direction === 'all' ? 'all' : direction, 10);
+              return <TopBottomPerformersChart topPerformers={top} bottomPerformers={bottom} />;
+            })()}
           </Card>
         </div>
       </div>
