@@ -4,12 +4,18 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import Overview from "./pages/Overview";
+import Partners from "./pages/Partners";
+import SKUAnalysis from "./pages/SKUAnalysis";
+import ChurnAnalysis from "./pages/ChurnAnalysis";
 
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Overview} />
+      <Route path="/partners" component={Partners} />
+      <Route path="/sku" component={SKUAnalysis} />
+      <Route path="/churn" component={ChurnAnalysis} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -26,7 +32,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
-        defaultTheme="light"
+        defaultTheme="dark"
         // switchable
       >
         <TooltipProvider>
