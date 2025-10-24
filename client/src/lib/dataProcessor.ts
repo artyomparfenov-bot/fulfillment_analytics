@@ -31,16 +31,25 @@ export function filterByTimeRange(records: OrderRecord[], days: number | null): 
   });
 }
 
+export function getActualDirection(record: OrderRecord): string {
+  // VSROK is a special partner that should be treated as its own direction
+  if (record["Партнер"] === "VSROK") {
+    return "VSROK";
+  }
+  return record["Направление (расчёт)"];
+}
+
 export function filterByDirection(records: OrderRecord[], direction: string): OrderRecord[] {
   if (direction === 'all') return records;
-  return records.filter(record => record["Направление (расчёт)"] === direction);
+  return records.filter(record => getActualDirection(record) === direction);
 }
 
 export function getDirections(records: OrderRecord[]): string[] {
   const directions = new Set<string>();
   records.forEach(record => {
-    if (record["Направление (расчёт)"]) {
-      directions.add(record["Направление (расчёт)"]);
+    const actualDirection = getActualDirection(record);
+    if (actualDirection) {
+      directions.add(actualDirection);
     }
   });
   return Array.from(directions).sort();
@@ -79,7 +88,8 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
     if (!record["Партнер"]) {
       return;
     }
-    const key = `${record["Партнер"]}_${record["Направление (расчёт)"]}`;
+    const actualDirection = getActualDirection(record);
+    const key = `${record["Партнер"]}_${actualDirection}`;
     if (!partnerMap.has(key)) {
       partnerMap.set(key, []);
     }
@@ -91,7 +101,7 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
   
   partnerMap.forEach((partnerRecords, key) => {
     const partner = partnerRecords[0]["Партнер"];
-    const direction = partnerRecords[0]["Направление (расчёт)"];
+    const direction = getActualDirection(partnerRecords[0]);
     
     // Sort by date
     const sortedRecords = partnerRecords.sort((a, b) => 
@@ -247,7 +257,8 @@ export function calculateSKUStats(records: OrderRecord[]): SKUStats[] {
   const skuMap = new Map<string, OrderRecord[]>();
   
   records.forEach(record => {
-    const key = `${record["Артикул"]}_${record["Партнер"]}_${record["Направление (расчёт)"]}`;
+    const actualDirection = getActualDirection(record);
+    const key = `${record["Артикул"]}_${record["Партнер"]}_${actualDirection}`;
     if (!skuMap.has(key)) {
       skuMap.set(key, []);
     }
@@ -260,7 +271,7 @@ export function calculateSKUStats(records: OrderRecord[]): SKUStats[] {
   skuMap.forEach((skuRecords, key) => {
     const sku = skuRecords[0]["Артикул"];
     const partner = skuRecords[0]["Партнер"];
-    const direction = skuRecords[0]["Направление (расчёт)"];
+    const direction = getActualDirection(skuRecords[0]);
     
     const sortedRecords = skuRecords.sort((a, b) => 
       parseISO(a["Дата заказа (orders)"]).getTime() - parseISO(b["Дата заказа (orders)"]).getTime()
