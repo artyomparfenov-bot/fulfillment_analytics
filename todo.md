@@ -20,6 +20,11 @@
 - [x] Frontend upload UI component with drag-and-drop
 - [x] Real-time data refresh and metric recalculation
 - [x] Error handling for invalid dates in data processing
+- [x] Alert prioritization engine with multi-factor scoring
+- [x] Alert severity levels and risk categories
+- [x] Enhanced alerts UI with filtering and sorting
+- [x] Alert grouping and aggregation by type
+- [x] Customer size classification and revenue impact calculation
 
 ## Planned Features
 - [ ] Email/Slack notifications for critical alerts
