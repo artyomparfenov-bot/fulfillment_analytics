@@ -26,8 +26,14 @@ export function filterByTimeRange(records: OrderRecord[], days: number | null): 
   
   const cutoffDate = subDays(new Date(), days);
   return records.filter(record => {
-    const orderDate = parseISO(record["Дата заказа (orders)"]);
-    return orderDate >= cutoffDate;
+    try {
+      const dateStr = record["Дата заказа (orders)"];
+      if (!dateStr) return false;
+      const orderDate = parseISO(dateStr);
+      return !isNaN(orderDate.getTime()) && orderDate >= cutoffDate;
+    } catch (e) {
+      return false;
+    }
   });
 }
 

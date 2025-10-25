@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { getUnresolvedAlerts, getAlertsByPartner, resolveAlert } from "./db";
+import { dataRouter } from "./routers/data";
 
 export const appRouter = router({
   system: systemRouter,
@@ -18,6 +19,8 @@ export const appRouter = router({
       } as const;
     }),
   }),
+
+  data: dataRouter,
 
   alerts: router({
     getUnresolved: protectedProcedure.query(() => getUnresolvedAlerts(100)),

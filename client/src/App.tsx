@@ -10,6 +10,7 @@ import SKUAnalysis from "./pages/SKUAnalysis";
 import ChurnAnalysis from "./pages/ChurnAnalysis";
 import ChurnAnalysisEnhanced from "./pages/ChurnAnalysisEnhanced";
 import Alerts from "./pages/Alerts";
+import DataManagement from "./pages/DataManagement";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/sku" component={SKUAnalysis} />
       <Route path="/churn" component={ChurnAnalysisEnhanced} />
       <Route path="/alerts" component={Alerts} />
+      <Route path="/data" component={DataManagement} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

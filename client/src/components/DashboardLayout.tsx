@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { BarChart3, Users, Package, TrendingDown, AlertTriangle } from 'lucide-react';
+import { BarChart3, Users, Package, TrendingDown, AlertTriangle, Database } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 
 interface DashboardLayoutProps {
@@ -15,6 +15,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/sku', icon: Package, label: 'SKU' },
     { path: '/churn', icon: TrendingDown, label: 'Churn Analysis' },
     { path: '/alerts', icon: AlertTriangle, label: 'Сигналы' },
+    { path: '/data', icon: Database, label: 'Данные' },
   ];
   
   return (

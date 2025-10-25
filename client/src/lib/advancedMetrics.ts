@@ -146,22 +146,41 @@ export function calculateDetailedDirectionStats(
   const previousPeriodStart = subDays(now, currentPeriodDays * 2);
   
   const currentData = allData.filter(r => {
-    const date = parseISO(r["Дата заказа (orders)"]);
-    return date >= currentPeriodStart;
+    try {
+      const dateStr = r["Дата заказа (orders)"];
+      if (!dateStr) return false;
+      const date = parseISO(dateStr);
+      return !isNaN(date.getTime()) && date >= currentPeriodStart;
+    } catch (e) {
+      return false;
+    }
   });
   
   const previousData = allData.filter(r => {
-    const date = parseISO(r["Дата заказа (orders)"]);
-    return date >= previousPeriodStart && date < currentPeriodStart;
+    try {
+      const dateStr = r["Дата заказа (orders)"];
+      if (!dateStr) return false;
+      const date = parseISO(dateStr);
+      return !isNaN(date.getTime()) && date >= previousPeriodStart && date < currentPeriodStart;
+    } catch (e) {
+      return false;
+    }
   });
   
   // Get all partners' last order dates
   const allPartnersLastOrder = new Map<string, Date>();
   allData.forEach(r => {
-    const partner = r["Партнер"];
-    const date = parseISO(r["Дата заказа (orders)"]);
-    if (!allPartnersLastOrder.has(partner) || date > allPartnersLastOrder.get(partner)!) {
-      allPartnersLastOrder.set(partner, date);
+    try {
+      const partner = r["Партнер"];
+      const dateStr = r["Дата заказа (orders)"];
+      if (!dateStr) return;
+      const date = parseISO(dateStr);
+      if (isNaN(date.getTime())) return;
+      if (!allPartnersLastOrder.has(partner) || date > allPartnersLastOrder.get(partner)!) {
+        allPartnersLastOrder.set(partner, date);
+      }
+    } catch (e) {
+      // Skip records with invalid dates
     }
   });
   
