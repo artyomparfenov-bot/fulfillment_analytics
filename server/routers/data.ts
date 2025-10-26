@@ -3,6 +3,7 @@ import { z } from "zod";
 import Papa from "papaparse";
 import fs from "fs";
 import path from "path";
+import { mergeXlsxFiles } from "../services/xlsxMergeService";
 
 // Helper function to merge CSV data
 async function mergeCSVData(
@@ -100,6 +101,67 @@ function validateCSVStructure(data: any[]): { valid: boolean; errors: string[] }
 }
 
 export const dataRouter = router({
+  uploadXlsxFiles: protectedProcedure
+    .input(
+      z.object({
+        ordersBase64: z.string(),
+        reportsBase64: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const tempDir = path.join(process.cwd(), "temp");
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      const ordersPath = path.join(tempDir, `orders_${Date.now()}.xlsx`);
+      const reportsPath = path.join(tempDir, `reports_${Date.now()}.xlsx`);
+
+      try {
+        // Write base64 files to disk
+        fs.writeFileSync(ordersPath, Buffer.from(input.ordersBase64, "base64"));
+        fs.writeFileSync(reportsPath, Buffer.from(input.reportsBase64, "base64"));
+
+        // Merge XLSX files
+        const mergeResult = mergeXlsxFiles(ordersPath, reportsPath);
+
+        if (!mergeResult.success) {
+          return {
+            success: false,
+            message: `XLSX merge failed: ${mergeResult.error}`,
+            error: mergeResult.error,
+          };
+        }
+
+        // Merge with existing data
+        const result = await mergeCSVData(mergeResult.mergedData);
+
+        return {
+          success: true,
+          message: result.message,
+          recordsAdded: result.recordsAdded,
+          duplicatesRemoved: result.duplicatesRemoved,
+          totalRecords: result.totalRecords,
+          stats: mergeResult.stats,
+        };
+      } catch (error) {
+        console.error("XLSX merge upload error:", error);
+        return {
+          success: false,
+          message: `Error processing XLSX files: ${error instanceof Error ? error.message : "Unknown error"}`,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      } finally {
+        // Cleanup temp files
+        try {
+          fs.unlinkSync(ordersPath);
+          fs.unlinkSync(reportsPath);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+    }),
+
   uploadCSV: protectedProcedure
     .input(z.object({ csvContent: z.string() }))
     .mutation(async ({ input }) => {

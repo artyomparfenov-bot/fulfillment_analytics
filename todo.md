@@ -25,6 +25,12 @@
 - [x] Enhanced alerts UI with filtering and sorting
 - [x] Alert grouping and aggregation by type
 - [x] Customer size classification and revenue impact calculation
+- [x] XLSX merge system for Orders + Reports files
+- [x] Backend XLSX parsing and merging service (using Python logic)
+- [x] Dual XLSX upload UI (Orders XLSX + Reports XLSX)
+- [x] Automatic file type detection and validation
+- [x] Data enrichment from Reports to Orders
+- [x] Marketplace normalization from XLSX data
 
 ## Planned Features
 - [ ] Email/Slack notifications for critical alerts
