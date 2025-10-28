@@ -16,9 +16,7 @@ export interface PrioritizedAlert {
   
   // Business impact metrics
   customerSize: CustomerSize;
-  estimatedMonthlyRevenue?: number;
   churnRisk: number; // 0-100
-  revenueAtRisk?: number;
   
   // Alert details
   currentValue?: string;
@@ -254,7 +252,6 @@ export function calculateAlertStats(alerts: PrioritizedAlert[]) {
     CONCENTRATION: alerts.filter(a => a.alertType === 'CONCENTRATION').length
   };
   
-  const totalRevenueAtRisk = alerts.reduce((sum, a) => sum + (a.revenueAtRisk || 0), 0);
   const avgPriorityScore = alerts.length > 0 
     ? Math.round(alerts.reduce((sum, a) => sum + a.priorityScore, 0) / alerts.length)
     : 0;
@@ -264,7 +261,6 @@ export function calculateAlertStats(alerts: PrioritizedAlert[]) {
     bySeverity,
     byCustomerSize,
     byCategory,
-    totalRevenueAtRisk,
     avgPriorityScore,
     newAlerts: alerts.filter(a => a.isNew).length
   };

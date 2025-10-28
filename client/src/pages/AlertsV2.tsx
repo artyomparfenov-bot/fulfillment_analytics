@@ -106,9 +106,7 @@ export default function AlertsV2() {
         priorityScore,
         message: alert.message,
         customerSize,
-        estimatedMonthlyRevenue: monthlyRevenue,
         churnRisk,
-        revenueAtRisk: Math.round(revenueAtRisk),
         currentValue: alert.currentValue,
         benchmarkValue: alert.benchmarkValue,
         percentageChange: alert.percentageChange ? parseFloat(alert.percentageChange) : undefined,
@@ -229,9 +227,6 @@ export default function AlertsV2() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{alert.message}</p>
-                      {alert.revenueAtRisk && (
-                        <p className="text-xs text-red-300 mt-2">Выручка под риском: ₽{alert.revenueAtRisk.toLocaleString()}</p>
-                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-red-400">{alert.priorityScore}</div>
@@ -266,10 +261,7 @@ export default function AlertsV2() {
             <p className="text-xs text-muted-foreground mb-1">Всего</p>
             <p className="text-2xl font-bold text-primary">{alertStats.total}</p>
           </Card>
-          <Card className="p-4 border-green-500/30 bg-green-900/10">
-            <p className="text-xs text-muted-foreground mb-1">Выручка под риском</p>
-            <p className="text-xl font-bold text-green-400">₽{Math.round(alertStats.totalRevenueAtRisk / 1000)}K</p>
-          </Card>
+
         </div>
 
         {/* Filters */}
@@ -441,9 +433,6 @@ export default function AlertsV2() {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{alert.message}</p>
-                          {alert.revenueAtRisk && (
-                            <p className="text-xs text-muted-foreground mt-1">Выручка под риском: ₽{alert.revenueAtRisk.toLocaleString()}</p>
-                          )}
                         </div>
                       </div>
                       <div className="text-right whitespace-nowrap">

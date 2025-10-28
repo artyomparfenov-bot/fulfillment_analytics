@@ -189,9 +189,20 @@ function parseDate(value: any): string {
 
 function calculateDirection(warehouse: string): string {
   if (!warehouse) return "";
-  if (String(warehouse).includes("Почта")) {
-    return "Почта";
+  const warehouseStr = String(warehouse).toLowerCase();
+  
+  // Check for specific warehouses
+  if (warehouseStr.includes("ярославка") || warehouseStr.includes("yaroslavka")) {
+    return "Ярославка";
   }
+  if (warehouseStr.includes("vsrok") || warehouseStr.includes("в-срок")) {
+    return "VSROK";
+  }
+  if (warehouseStr.includes("express") || warehouseStr.includes("fbs") || warehouseStr.includes("экспресс")) {
+    return "Express/FBS";
+  }
+  
+  // Default to Express/FBS for unknown warehouses
   return "Express/FBS";
 }
 
