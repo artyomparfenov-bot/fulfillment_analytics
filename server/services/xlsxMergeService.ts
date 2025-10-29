@@ -248,9 +248,33 @@ export function mergeXlsxFiles(
 
   try {
     // Read Orders XLSX
+    console.log(`[XLSX Merge] Reading Orders from: ${ordersFilePath}`);
     const ordersBuffer = readFileSync(ordersFilePath);
-    const ordersWorkbook = XLSX.read(ordersBuffer, { type: "buffer" });
+    console.log(`[XLSX Merge] Orders buffer size: ${ordersBuffer.length} bytes`);
+    
+    let ordersWorkbook;
+    try {
+      ordersWorkbook = XLSX.read(ordersBuffer, { type: "buffer" });
+    } catch (xlsxError) {
+      console.error(`[XLSX Merge] Failed to parse Orders XLSX:`, xlsxError);
+      return {
+        success: false,
+        mergedData: [],
+        stats,
+        error: `Failed to parse Orders file: ${xlsxError instanceof Error ? xlsxError.message : "Invalid XLSX format"}`
+      };
+    }
+    
     const ordersSheet = ordersWorkbook.Sheets[ordersWorkbook.SheetNames[0]];
+    if (!ordersSheet) {
+      return {
+        success: false,
+        mergedData: [],
+        stats,
+        error: "Orders XLSX has no sheets"
+      };
+    }
+    
     const ordersData = XLSX.utils.sheet_to_json(ordersSheet);
 
     if (!ordersData || ordersData.length === 0) {
@@ -275,9 +299,33 @@ export function mergeXlsxFiles(
     }
 
     // Read Reports XLSX
+    console.log(`[XLSX Merge] Reading Reports from: ${reportsFilePath}`);
     const reportsBuffer = readFileSync(reportsFilePath);
-    const reportsWorkbook = XLSX.read(reportsBuffer, { type: "buffer" });
+    console.log(`[XLSX Merge] Reports buffer size: ${reportsBuffer.length} bytes`);
+    
+    let reportsWorkbook;
+    try {
+      reportsWorkbook = XLSX.read(reportsBuffer, { type: "buffer" });
+    } catch (xlsxError) {
+      console.error(`[XLSX Merge] Failed to parse Reports XLSX:`, xlsxError);
+      return {
+        success: false,
+        mergedData: [],
+        stats,
+        error: `Failed to parse Reports file: ${xlsxError instanceof Error ? xlsxError.message : "Invalid XLSX format"}`
+      };
+    }
+    
     const reportsSheet = reportsWorkbook.Sheets[reportsWorkbook.SheetNames[0]];
+    if (!reportsSheet) {
+      return {
+        success: false,
+        mergedData: [],
+        stats,
+        error: "Reports XLSX has no sheets"
+      };
+    }
+    
     const reportsData = XLSX.utils.sheet_to_json(reportsSheet);
 
     const reportsHeaders = reportsData && reportsData.length > 0
@@ -453,11 +501,12 @@ export function mergeXlsxFiles(
       stats
     };
   } catch (error) {
+    console.error(`[XLSX Merge] Unexpected error:`, error);
     return {
       success: false,
       mergedData: [],
       stats,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error during merge"
     };
   }
 }

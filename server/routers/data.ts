@@ -118,12 +118,55 @@ export const dataRouter = router({
       const reportsPath = path.join(tempDir, `reports_${Date.now()}.xlsx`);
 
       try {
+        // Validate base64 input
+        if (!input.ordersBase64 || input.ordersBase64.length === 0) {
+          return {
+            success: false,
+            message: "Orders file is empty",
+            error: "Orders file is empty",
+          };
+        }
+        if (!input.reportsBase64 || input.reportsBase64.length === 0) {
+          return {
+            success: false,
+            message: "Reports file is empty",
+            error: "Reports file is empty",
+          };
+        }
+
+        console.log(`[Data Router] Writing Orders file: ${ordersPath}`);
+        console.log(`[Data Router] Orders base64 length: ${input.ordersBase64.length}`);
+        
         // Write base64 files to disk
-        fs.writeFileSync(ordersPath, Buffer.from(input.ordersBase64, "base64"));
-        fs.writeFileSync(reportsPath, Buffer.from(input.reportsBase64, "base64"));
+        try {
+          fs.writeFileSync(ordersPath, Buffer.from(input.ordersBase64, "base64"));
+        } catch (writeError) {
+          console.error(`[Data Router] Failed to write Orders file:`, writeError);
+          return {
+            success: false,
+            message: `Failed to write Orders file: ${writeError instanceof Error ? writeError.message : "Unknown error"}`,
+            error: writeError instanceof Error ? writeError.message : "Unknown error",
+          };
+        }
+        
+        console.log(`[Data Router] Writing Reports file: ${reportsPath}`);
+        console.log(`[Data Router] Reports base64 length: ${input.reportsBase64.length}`);
+        
+        try {
+          fs.writeFileSync(reportsPath, Buffer.from(input.reportsBase64, "base64"));
+        } catch (writeError) {
+          console.error(`[Data Router] Failed to write Reports file:`, writeError);
+          return {
+            success: false,
+            message: `Failed to write Reports file: ${writeError instanceof Error ? writeError.message : "Unknown error"}`,
+            error: writeError instanceof Error ? writeError.message : "Unknown error",
+          };
+        }
 
         // Merge XLSX files
+        console.log(`[Data Router] Starting XLSX merge...`);
         const mergeResult = mergeXlsxFiles(ordersPath, reportsPath);
+        console.log(`[Data Router] XLSX merge result:`, { success: mergeResult.success, error: mergeResult.error });
 
         if (!mergeResult.success) {
           return {
@@ -145,11 +188,12 @@ export const dataRouter = router({
           stats: mergeResult.stats,
         };
       } catch (error) {
-        console.error("XLSX merge upload error:", error);
+        console.error("[Data Router] XLSX merge upload error:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         return {
           success: false,
-          message: `Error processing XLSX files: ${error instanceof Error ? error.message : "Unknown error"}`,
-          error: error instanceof Error ? error.message : "Unknown error",
+          message: `Error processing XLSX files: ${errorMessage}`,
+          error: errorMessage,
         };
       } finally {
         // Cleanup temp files
