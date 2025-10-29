@@ -1,6 +1,45 @@
 import Papa from 'papaparse';
-import { parseISO, differenceInDays, subDays } from 'date-fns';
+import { parseISO, differenceInDays, subDays, parse } from 'date-fns';
 import type { OrderRecord, PartnerStats, SKUStats, Alert, DirectionStats, ChurnPattern } from './types';
+
+// Flexible date parser that handles multiple formats
+function parseFlexibleDate(dateStr: string): Date {
+  if (!dateStr) throw new Error('Empty date string');
+  
+  // Try ISO format first (2025-10-17 or 2025-10-17T09:44:38)
+  try {
+    const date = parseISO(dateStr);
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try format with time (2025-10-17 09:44:38)
+  try {
+    const date = parse(dateStr, 'yyyy-MM-dd HH:mm:ss', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try format without time (2025-10-17)
+  try {
+    const date = parse(dateStr, 'yyyy-MM-dd', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try DD.MM.YYYY format
+  try {
+    const date = parse(dateStr, 'dd.MM.yyyy', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  throw new Error(`Unable to parse date: ${dateStr}`);
+}
 
 export async function loadCSVData(): Promise<OrderRecord[]> {
   const response = await fetch('/data_merged.csv');
@@ -29,7 +68,7 @@ export function filterByTimeRange(records: OrderRecord[], days: number | null): 
     try {
       const dateStr = record["Дата заказа (orders)"];
       if (!dateStr) return false;
-      const orderDate = parseISO(dateStr);
+      const orderDate = parseFlexibleDate(String(dateStr));
       return !isNaN(orderDate.getTime()) && orderDate >= cutoffDate;
     } catch (e) {
       return false;

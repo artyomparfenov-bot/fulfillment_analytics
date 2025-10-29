@@ -1,4 +1,44 @@
+import { parse, parseISO } from 'date-fns';
 import { OrderRecord } from './types';
+
+// Flexible date parser that handles multiple formats
+function parseFlexibleDate(dateStr: string): Date {
+  if (!dateStr) throw new Error('Empty date string');
+  
+  // Try ISO format first (2025-10-17 or 2025-10-17T09:44:38)
+  try {
+    const date = parseISO(dateStr);
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try format with time (2025-10-17 09:44:38)
+  try {
+    const date = parse(dateStr, 'yyyy-MM-dd HH:mm:ss', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try format without time (2025-10-17)
+  try {
+    const date = parse(dateStr, 'yyyy-MM-dd', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try DD.MM.YYYY format
+  try {
+    const date = parse(dateStr, 'dd.MM.yyyy', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  throw new Error(`Unable to parse date: ${dateStr}`);
+}
 
 export interface TimeSeriesData {
   date: string;
@@ -44,25 +84,32 @@ export function generateTimeSeriesData(
   const grouped = new Map<string, Map<string, number>>();
 
   data.forEach(row => {
-    const date = new Date(row['Дата заказа (orders)']);
-    let key: string;
+    try {
+      const dateStr = row['Дата заказа (orders)'];
+      if (!dateStr) return;
+      const date = parseFlexibleDate(String(dateStr));
+      if (isNaN(date.getTime())) return;
+      let key: string;
 
-    if (granularity === 'week') {
-      const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay());
-      key = weekStart.toISOString().split('T')[0];
-    } else {
-      key = date.toISOString().split('T')[0].slice(0, 7); // YYYY-MM
-    }
+      if (granularity === 'week') {
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        key = weekStart.toISOString().split('T')[0];
+      } else {
+        key = date.toISOString().split('T')[0].slice(0, 7); // YYYY-MM
+      }
 
-    const direction = getActualDirection(row['Партнер']);
-    
-    if (!grouped.has(key)) {
-      grouped.set(key, new Map());
+      const direction = getActualDirection(row['Партнер']);
+      
+      if (!grouped.has(key)) {
+        grouped.set(key, new Map());
+      }
+      
+      const directionMap = grouped.get(key)!;
+      directionMap.set(direction, (directionMap.get(direction) || 0) + 1);
+    } catch (e) {
+      // Skip records with invalid dates
     }
-    
-    const directionMap = grouped.get(key)!;
-    directionMap.set(direction, (directionMap.get(direction) || 0) + 1);
   });
 
   const result: TimeSeriesData[] = [];
@@ -88,14 +135,21 @@ export function analyzeClientCohorts(
   
   // Group partners by month of first order
   data.forEach(row => {
-    const date = new Date(row['Дата заказа (orders)']);
-    const month = date.toISOString().split('T')[0].slice(0, 7);
-    const partner = row['Партнер'];
-    
-    if (!monthlyPartners.has(month)) {
-      monthlyPartners.set(month, new Set());
+    try {
+      const dateStr = row['Дата заказа (orders)'];
+      if (!dateStr) return;
+      const date = parseFlexibleDate(String(dateStr));
+      if (isNaN(date.getTime())) return;
+      const month = date.toISOString().split('T')[0].slice(0, 7);
+      const partner = row['Партнер'];
+      
+      if (!monthlyPartners.has(month)) {
+        monthlyPartners.set(month, new Set());
+      }
+      monthlyPartners.get(month)!.add(partner);
+    } catch (e) {
+      // Skip records with invalid dates
     }
-    monthlyPartners.get(month)!.add(partner);
   });
 
   const result: ClientCohortData[] = [];
@@ -151,36 +205,50 @@ export function segmentClientsByAge(
   // First pass: determine first order date for each partner
   const partnerFirstDate = new Map<string, Date>();
   data.forEach(row => {
-    const partner = row['Партнер'];
-    const date = new Date(row['Дата заказа (orders)']);
-    
-    if (!partnerFirstDate.has(partner) || date < partnerFirstDate.get(partner)!) {
-      partnerFirstDate.set(partner, date);
+    try {
+      const partner = row['Партнер'];
+      const dateStr = row['Дата заказа (orders)'];
+      if (!dateStr) return;
+      const date = parseFlexibleDate(String(dateStr));
+      if (isNaN(date.getTime())) return;
+      
+      if (!partnerFirstDate.has(partner) || date < partnerFirstDate.get(partner)!) {
+        partnerFirstDate.set(partner, date);
+      }
+    } catch (e) {
+      // Skip records with invalid dates
     }
   });
 
   // Second pass: group by date and segment clients
   data.forEach(row => {
-    const date = new Date(row['Дата заказа (orders)']);
-    const dateKey = date.toISOString().split('T')[0].slice(0, 7);
-    const partner = row['Партнер'];
-    const direction = getActualDirection(partner);
+    try {
+      const dateStr = row['Дата заказа (orders)'];
+      if (!dateStr) return;
+      const date = parseFlexibleDate(String(dateStr));
+      if (isNaN(date.getTime())) return;
+      const dateKey = date.toISOString().split('T')[0].slice(0, 7);
+      const partner = row['Партнер'];
+      const direction = getActualDirection(partner);
 
-    if (selectedDirection !== 'all' && direction !== selectedDirection) {
-      return;
-    }
+      if (selectedDirection !== 'all' && direction !== selectedDirection) {
+        return;
+      }
 
-    if (!grouped.has(dateKey)) {
-      grouped.set(dateKey, { newClients: new Set(), currentClients: new Set() });
-    }
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, { newClients: new Set(), currentClients: new Set() });
+      }
 
-    const firstDate = partnerFirstDate.get(partner)!;
-    const daysSinceFirst = Math.floor((date.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+      const firstDate = partnerFirstDate.get(partner)!;
+      const daysSinceFirst = Math.floor((date.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (daysSinceFirst <= 30) {
-      grouped.get(dateKey)!.newClients.add(partner);
-    } else {
-      grouped.get(dateKey)!.currentClients.add(partner);
+      if (daysSinceFirst <= 30) {
+        grouped.get(dateKey)!.newClients.add(partner);
+      } else {
+        grouped.get(dateKey)!.currentClients.add(partner);
+      }
+    } catch (e) {
+      // Skip records with invalid dates
     }
   });
 
@@ -218,18 +286,25 @@ export function findTopBottomPerformers(
   const previousPeriod = new Map<string, number>();
 
   data.forEach(row => {
-    const date = new Date(row['Дата заказа (orders)']);
-    const partner = row['Партнер'];
-    const direction = getActualDirection(partner);
+    try {
+      const dateStr = row['Дата заказа (orders)'];
+      if (!dateStr) return;
+      const date = parseFlexibleDate(String(dateStr));
+      if (isNaN(date.getTime())) return;
+      const partner = row['Партнер'];
+      const direction = getActualDirection(partner);
 
-    if (selectedDirection !== 'all' && direction !== selectedDirection) {
-      return;
-    }
+      if (selectedDirection !== 'all' && direction !== selectedDirection) {
+        return;
+      }
 
-    if (date >= thirtyDaysAgo) {
-      currentPeriod.set(partner, (currentPeriod.get(partner) || 0) + 1);
-    } else if (date >= sixtyDaysAgo) {
-      previousPeriod.set(partner, (previousPeriod.get(partner) || 0) + 1);
+      if (date >= thirtyDaysAgo) {
+        currentPeriod.set(partner, (currentPeriod.get(partner) || 0) + 1);
+      } else if (date >= sixtyDaysAgo) {
+        previousPeriod.set(partner, (previousPeriod.get(partner) || 0) + 1);
+      }
+    } catch (e) {
+      // Skip records with invalid dates
     }
   });
 

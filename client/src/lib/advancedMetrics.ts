@@ -1,5 +1,44 @@
-import { parseISO, differenceInDays, subDays, startOfMonth, format } from 'date-fns';
+import { parseISO, differenceInDays, subDays, startOfMonth, format, parse } from 'date-fns';
 import type { OrderRecord, PartnerStats } from './types';
+
+// Flexible date parser that handles multiple formats
+function parseFlexibleDate(dateStr: string): Date {
+  if (!dateStr) throw new Error('Empty date string');
+  
+  // Try ISO format first (2025-10-17 or 2025-10-17T09:44:38)
+  try {
+    const date = parseISO(dateStr);
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try format with time (2025-10-17 09:44:38)
+  try {
+    const date = parse(dateStr, 'yyyy-MM-dd HH:mm:ss', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try format without time (2025-10-17)
+  try {
+    const date = parse(dateStr, 'yyyy-MM-dd', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  // Try DD.MM.YYYY format
+  try {
+    const date = parse(dateStr, 'dd.MM.yyyy', new Date());
+    if (!isNaN(date.getTime())) return date;
+  } catch (e) {
+    // Continue to next format
+  }
+  
+  throw new Error(`Unable to parse date: ${dateStr}`);
+}
 
 export interface BusinessMetrics {
   retentionRate: number; // % partners active in both current and previous period
@@ -160,7 +199,7 @@ export function calculateDetailedDirectionStats(
     try {
       const dateStr = r["Дата заказа (orders)"];
       if (!dateStr) return false;
-      const date = parseISO(dateStr);
+      const date = parseFlexibleDate(String(dateStr));
       return !isNaN(date.getTime()) && date >= previousPeriodStart && date < currentPeriodStart;
     } catch (e) {
       return false;
@@ -288,13 +327,20 @@ export function calculateSKUMetrics(allData: OrderRecord[]): SKUMetrics[] {
   const monthlyData = new Map<string, OrderRecord[]>();
   
   allData.forEach(r => {
-    const date = parseISO(r["Дата заказа (orders)"]);
-    const monthKey = format(date, 'yyyy-MM');
-    
-    if (!monthlyData.has(monthKey)) {
-      monthlyData.set(monthKey, []);
+    try {
+      const dateStr = r["Дата заказа (orders)"];
+      if (!dateStr) return; // Skip if no date
+      const date = parseFlexibleDate(String(dateStr));
+      if (isNaN(date.getTime())) return; // Skip if invalid date
+      const monthKey = format(date, 'yyyy-MM');
+      
+      if (!monthlyData.has(monthKey)) {
+        monthlyData.set(monthKey, []);
+      }
+      monthlyData.get(monthKey)!.push(r);
+    } catch (e) {
+      // Skip records with invalid dates
     }
-    monthlyData.get(monthKey)!.push(r);
   });
   
   const sortedMonths = Array.from(monthlyData.keys()).sort();
@@ -305,16 +351,23 @@ export function calculateSKUMetrics(allData: OrderRecord[]): SKUMetrics[] {
   
   // First pass: record first and last seen dates
   allData.forEach(r => {
-    const sku = r["Артикул"];
-    const date = parseISO(r["Дата заказа (orders)"]);
-    const monthKey = format(date, 'yyyy-MM');
-    
-    if (!skuFirstSeen.has(sku) || monthKey < skuFirstSeen.get(sku)!) {
-      skuFirstSeen.set(sku, monthKey);
-    }
-    
-    if (!skuLastSeen.has(sku) || monthKey > skuLastSeen.get(sku)!) {
-      skuLastSeen.set(sku, monthKey);
+    try {
+      const sku = r["Артикул"];
+      const dateStr = r["Дата заказа (orders)"];
+      if (!dateStr || !sku) return;
+      const date = parseFlexibleDate(String(dateStr));
+      if (isNaN(date.getTime())) return;
+      const monthKey = format(date, 'yyyy-MM');
+      
+      if (!skuFirstSeen.has(sku) || monthKey < skuFirstSeen.get(sku)!) {
+        skuFirstSeen.set(sku, monthKey);
+      }
+      
+      if (!skuLastSeen.has(sku) || monthKey > skuLastSeen.get(sku)!) {
+        skuLastSeen.set(sku, monthKey);
+      }
+    } catch (e) {
+      // Skip records with invalid dates
     }
   });
   
@@ -329,7 +382,13 @@ export function calculateSKUMetrics(allData: OrderRecord[]): SKUMetrics[] {
     const newSKU = Array.from(skusThisMonth).filter(sku => skuFirstSeen.get(sku) === month).length;
     
     // Churned SKUs: last seen more than 2 months ago from current month
-    const monthDate = parseISO(month + '-01');
+    let monthDate: Date;
+    try {
+      monthDate = parseFlexibleDate(month + '-01');
+      if (isNaN(monthDate.getTime())) return;
+    } catch (e) {
+      return;
+    }
     const twoMonthsAgo = format(subDays(now, 60), 'yyyy-MM');
     
     const churnedSKU = Array.from(skuLastSeen.entries()).filter(([sku, lastMonth]) => {
