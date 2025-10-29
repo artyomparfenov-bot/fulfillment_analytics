@@ -105,3 +105,14 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Large data files (use Git LFS instead)
+*.csv
+*.xlsx
+*.xls
+data_merged.csv
+
+# Large files
+*.tar.gz
+*.zip
+*.rar
