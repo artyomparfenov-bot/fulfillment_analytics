@@ -49,6 +49,16 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
     setError(null);
   };
 
+  // Helper function to convert ArrayBuffer to base64
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    let binary = "";
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  };
+
   const handleUpload = async () => {
     if (!ordersFile || !reportsFile) {
       setError("Please select both Orders and Reports files");
@@ -63,8 +73,9 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
       const ordersBuffer = await ordersFile.arrayBuffer();
       const reportsBuffer = await reportsFile.arrayBuffer();
 
-      const ordersBase64 = Buffer.from(ordersBuffer).toString("base64");
-      const reportsBase64 = Buffer.from(reportsBuffer).toString("base64");
+      // Use btoa for browser-safe base64 encoding
+      const ordersBase64 = arrayBufferToBase64(ordersBuffer);
+      const reportsBase64 = arrayBufferToBase64(reportsBuffer);
 
       const result = await uploadMutation.mutateAsync({
         ordersBase64,
@@ -94,6 +105,7 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
+      console.error("Upload error:", err);
     } finally {
       setLoading(false);
     }
@@ -120,12 +132,12 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
                 : "border-gray-300 hover:border-blue-400"
             }`}
           >
-            <div className="text-center">
-              <FileSpreadsheet className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="font-semibold text-gray-700">Orders XLSX</p>
-              <p className="text-sm text-gray-500">Drag and drop or click to select</p>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <FileSpreadsheet className="w-8 h-8 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">Orders XLSX</span>
+              <span className="text-xs text-gray-500">Drag and drop or click to select</span>
               {ordersFile && (
-                <p className="text-sm text-green-600 mt-2">✓ {ordersFile.name}</p>
+                <span className="text-xs text-green-600 font-semibold">✓ {ordersFile.name}</span>
               )}
             </div>
           </label>
@@ -148,12 +160,12 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
                 : "border-gray-300 hover:border-blue-400"
             }`}
           >
-            <div className="text-center">
-              <FileSpreadsheet className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="font-semibold text-gray-700">Reports XLSX</p>
-              <p className="text-sm text-gray-500">Drag and drop or click to select</p>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <FileSpreadsheet className="w-8 h-8 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">Reports XLSX</span>
+              <span className="text-xs text-gray-500">Drag and drop or click to select</span>
               {reportsFile && (
-                <p className="text-sm text-green-600 mt-2">✓ {reportsFile.name}</p>
+                <span className="text-xs text-green-600 font-semibold">✓ {reportsFile.name}</span>
               )}
             </div>
           </label>
@@ -164,16 +176,16 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
       <button
         onClick={handleUpload}
         disabled={!ordersFile || !reportsFile || loading}
-        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
-            <Loader className="w-5 h-5 animate-spin" />
-            Processing...
+            <Loader className="w-4 h-4 animate-spin" />
+            Uploading...
           </>
         ) : (
           <>
-            <Upload className="w-5 h-5" />
+            <Upload className="w-4 h-4" />
             Upload and Merge Files
           </>
         )}
@@ -181,8 +193,8 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-red-900">Upload Error</p>
             <p className="text-sm text-red-700">{error}</p>
@@ -190,73 +202,56 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
         </div>
       )}
 
-      {/* Success Message with Stats */}
+      {/* Success Message */}
       {success && stats && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex gap-3 mb-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+          <div className="flex gap-3">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-green-900">Upload Successful!</p>
-              <p className="text-sm text-green-700">Files merged and system updated</p>
+              <p className="font-semibold text-green-900">Data uploaded successfully</p>
+              <p className="text-sm text-green-700">Files have been merged and data updated</p>
             </div>
           </div>
 
-          {/* Statistics Grid */}
+          {/* Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-            <div className="bg-white p-3 rounded border border-green-100">
+            <div className="bg-white p-3 rounded border border-green-200">
               <p className="text-xs text-gray-600">Orders Read</p>
-              <p className="text-lg font-bold text-green-700">{stats.ordersRowsRead}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.ordersRowsRead}</p>
             </div>
-            <div className="bg-white p-3 rounded border border-green-100">
-              <p className="text-xs text-gray-600">Unique Orders</p>
-              <p className="text-lg font-bold text-green-700">{stats.ordersUniqueIds}</p>
-            </div>
-            <div className="bg-white p-3 rounded border border-green-100">
+            <div className="bg-white p-3 rounded border border-green-200">
               <p className="text-xs text-gray-600">Reports Read</p>
-              <p className="text-lg font-bold text-green-700">{stats.reportsRowsRead}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.reportsRowsRead}</p>
             </div>
-            <div className="bg-white p-3 rounded border border-green-100">
-              <p className="text-xs text-gray-600">Reports Used</p>
-              <p className="text-lg font-bold text-green-700">{stats.reportRowsUsedLastWins}</p>
+            <div className="bg-white p-3 rounded border border-green-200">
+              <p className="text-xs text-gray-600">Coverage</p>
+              <p className="text-lg font-bold text-gray-900">{stats.coveragePercent.toFixed(1)}%</p>
             </div>
-            <div className="bg-white p-3 rounded border border-green-100">
-              <p className="text-xs text-gray-600">Match Coverage</p>
-              <p className="text-lg font-bold text-green-700">{stats.coveragePercent.toFixed(1)}%</p>
+            <div className="bg-white p-3 rounded border border-green-200">
+              <p className="text-xs text-gray-600">Output Rows</p>
+              <p className="text-lg font-bold text-gray-900">{stats.outputRows}</p>
             </div>
-            <div className="bg-white p-3 rounded border border-green-100">
-              <p className="text-xs text-gray-600">Final Records</p>
-              <p className="text-lg font-bold text-green-700">{stats.outputRows}</p>
+            <div className="bg-white p-3 rounded border border-green-200">
+              <p className="text-xs text-gray-600">Matched</p>
+              <p className="text-lg font-bold text-gray-900">{stats.ordersWithReportMatch}</p>
+            </div>
+            <div className="bg-white p-3 rounded border border-green-200">
+              <p className="text-xs text-gray-600">Duplicates Removed</p>
+              <p className="text-lg font-bold text-gray-900">{stats.reportRowsUsedLastWins}</p>
             </div>
           </div>
 
           {/* Direction Breakdown */}
           {Object.keys(stats.directionBreakdown).length > 0 && (
-            <div className="mt-4 p-3 bg-white rounded border border-green-100">
-              <p className="text-sm font-semibold text-gray-700 mb-2">Direction Breakdown</p>
-              <div className="space-y-1">
+            <div className="mt-4 pt-4 border-t border-green-200">
+              <p className="text-sm font-semibold text-gray-900 mb-2">Direction Breakdown:</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {Object.entries(stats.directionBreakdown).map(([direction, count]) => (
-                  <div key={direction} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{direction}</span>
-                    <span className="font-semibold text-gray-900">{count}</span>
+                  <div key={direction} className="text-xs">
+                    <p className="text-gray-600">{direction}</p>
+                    <p className="font-bold text-gray-900">{count}</p>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Marketplace Distribution */}
-          {Object.keys(stats.marketplaceTop10).length > 0 && (
-            <div className="mt-4 p-3 bg-white rounded border border-green-100">
-              <p className="text-sm font-semibold text-gray-700 mb-2">Top Marketplaces</p>
-              <div className="space-y-1">
-                {Object.entries(stats.marketplaceTop10)
-                  .slice(0, 5)
-                  .map(([marketplace, count]) => (
-                    <div key={marketplace} className="flex justify-between text-sm">
-                      <span className="text-gray-600">{marketplace}</span>
-                      <span className="font-semibold text-gray-900">{count}</span>
-                    </div>
-                  ))}
               </div>
             </div>
           )}
@@ -265,19 +260,19 @@ export function XlsxUpload({ onSuccess }: { onSuccess?: () => void }) {
           {(stats.qualityChecks.badDateRows > 0 ||
             stats.qualityChecks.negativeOrZeroUnits > 0 ||
             stats.qualityChecks.weightAnomalies > 0) && (
-            <div className="mt-4 p-3 bg-yellow-50 rounded border border-yellow-100">
-              <p className="text-sm font-semibold text-yellow-900 mb-2">Quality Warnings</p>
-              <div className="space-y-1 text-sm">
+            <div className="mt-4 pt-4 border-t border-yellow-200 bg-yellow-50 p-3 rounded">
+              <p className="text-sm font-semibold text-yellow-900 mb-2">Quality Warnings:</p>
+              <ul className="text-xs text-yellow-800 space-y-1">
                 {stats.qualityChecks.badDateRows > 0 && (
-                  <p className="text-yellow-700">⚠ {stats.qualityChecks.badDateRows} rows with invalid dates</p>
+                  <li>• {stats.qualityChecks.badDateRows} rows with invalid dates</li>
                 )}
                 {stats.qualityChecks.negativeOrZeroUnits > 0 && (
-                  <p className="text-yellow-700">⚠ {stats.qualityChecks.negativeOrZeroUnits} rows with invalid quantities</p>
+                  <li>• {stats.qualityChecks.negativeOrZeroUnits} rows with invalid quantities</li>
                 )}
                 {stats.qualityChecks.weightAnomalies > 0 && (
-                  <p className="text-yellow-700">⚠ {stats.qualityChecks.weightAnomalies} rows with weight anomalies</p>
+                  <li>• {stats.qualityChecks.weightAnomalies} rows with weight anomalies</li>
                 )}
-              </div>
+              </ul>
             </div>
           )}
         </div>
