@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ScatterChart, Scatter } from 'recharts';
 import { TrendingDown, TrendingUp, AlertTriangle, CheckCircle, ArrowUp, ArrowDown } from 'lucide-react';
-import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats, analyzeSuccessPatterns } from '@/lib/dataProcessor';
+import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats, analyzeSuccessPatterns, calculateSnapshotDate, setSnapshotDate } from '@/lib/dataProcessor';
 import { buildCohortAnalysis, generateSegmentPortraits, calculateChurnScore, getPartnerSegment, calculateRiskTrajectory } from '@/lib/churnAnalytics';
 import type { OrderRecord, TimeRange } from '@/lib/types';
 
@@ -19,6 +19,8 @@ export default function ChurnAnalysisEnhanced() {
   
   useEffect(() => {
     loadCSVData().then(data => {
+      const snapshotDate = calculateSnapshotDate(data);
+      setSnapshotDate(snapshotDate);
       setAllData(data);
       setDirections(getDirections(data));
       setLoading(false);
@@ -373,14 +375,14 @@ export default function ChurnAnalysisEnhanced() {
                           <span className="text-muted-foreground">Тренд:</span>
                           {partner.riskTrend === 'improving' && (
                             <>
-                              <ArrowDown className="w-4 h-4 text-green-400" />
-                              <span className="text-green-400">Улучшается ({partner.riskChange.toFixed(0)}%)</span>
+                              <ArrowDown className="w-4 h-4 text-green-500" />
+                              <span className="text-green-500 font-semibold">Улучшается (-{Math.abs(partner.riskChange).toFixed(0)}%)</span>
                             </>
                           )}
                           {partner.riskTrend === 'degrading' && (
                             <>
-                              <ArrowUp className="w-4 h-4 text-red-400" />
-                              <span className="text-red-400">Ухудшается (+{partner.riskChange.toFixed(0)}%)</span>
+                              <ArrowUp className="w-4 h-4 text-red-500" />
+                              <span className="text-red-500 font-semibold">Ухудшается (+{partner.riskChange.toFixed(0)}%)</span>
                             </>
                           )}
                           {partner.riskTrend === 'stable' && (

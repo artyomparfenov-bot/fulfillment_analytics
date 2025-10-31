@@ -5,7 +5,7 @@ import StatCard from '@/components/StatCard';
 import { Card } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Package, Users, TrendingUp, AlertTriangle } from 'lucide-react';
-import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats, calculateDirectionStats } from '@/lib/dataProcessor';
+import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats, calculateDirectionStats, calculateSnapshotDate, setSnapshotDate } from '@/lib/dataProcessor';
 import { calculateBusinessMetrics, calculateDetailedDirectionStats, calculateSKUMetrics } from '@/lib/advancedMetrics';
 import { generateTimeSeriesData, analyzeClientCohorts, segmentClientsByAge, findTopBottomPerformers } from '@/lib/overviewAnalytics';
 import TimeSeriesChart from '@/components/TimeSeriesChart';
@@ -13,6 +13,17 @@ import ClientSegmentChart from '@/components/ClientSegmentChart';
 import ClientCohortChart from '@/components/ClientCohortChart';
 import TopBottomPerformersChart from '@/components/TopBottomPerformersChart';
 import type { OrderRecord, TimeRange } from '@/lib/types';
+
+
+
+function getDirectionLabel(direction: string | undefined): string {
+  if (!direction || direction === 'undefined' || direction === '') return 'Прочее';
+  return direction;
+}
+
+
+
+
 
 export default function Overview() {
   const [allData, setAllData] = useState<OrderRecord[]>([]);
@@ -23,6 +34,8 @@ export default function Overview() {
   
   useEffect(() => {
     loadCSVData().then(data => {
+      const snapshotDate = calculateSnapshotDate(data);
+      setSnapshotDate(snapshotDate);
       setAllData(data);
       setDirections(getDirections(data));
       setLoading(false);
@@ -69,6 +82,7 @@ export default function Overview() {
   }
   
   const filteredData = filterByDirection(filterByTimeRange(allData, timeRange.days), direction);
+  const allTimeData = filterByDirection(allData, direction);
   const partnerStats = calculatePartnerStats(filteredData);
   const directionStats = calculateDirectionStats(filteredData);
   

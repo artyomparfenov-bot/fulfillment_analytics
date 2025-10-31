@@ -6,8 +6,14 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
-import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculateSKUStats } from '@/lib/dataProcessor';
+import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculateSKUStats, calculateSnapshotDate, setSnapshotDate } from '@/lib/dataProcessor';
 import type { OrderRecord, TimeRange, SKUStats } from '@/lib/types';
+
+function cvToStability(cv: number): { label: string; color: string } {
+  if (cv <= 0.25) return { label: 'Стабильно', color: 'text-green-400' };
+  if (cv <= 0.5) return { label: 'Умеренно', color: 'text-yellow-400' };
+  return { label: 'Волатильно', color: 'text-red-400' };
+}
 
 export default function SKUAnalysis() {
   const [allData, setAllData] = useState<OrderRecord[]>([]);
@@ -19,6 +25,8 @@ export default function SKUAnalysis() {
   
   useEffect(() => {
     loadCSVData().then(data => {
+      const snapshotDate = calculateSnapshotDate(data);
+      setSnapshotDate(snapshotDate);
       setAllData(data);
       setDirections(getDirections(data));
       setLoading(false);

@@ -6,6 +6,22 @@ import path from "path";
 import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
+// SPA history fallback middleware
+function spaFallbackMiddleware(): any {
+  return {
+    name: 'spa-fallback',
+    configResolved(config: any) {
+      // Store config for use in middleware
+    },
+    apply: 'serve',
+    enforce: 'post',
+    async transform(code: any, id: any) {
+      // This hook is for transforming modules
+      return null;
+    },
+  };
+}
+
 // Only use Manus runtime in development
 const isProduction = process.env.NODE_ENV === "production";
 const plugins = [
@@ -75,6 +91,19 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    middlewareMode: false,
+  },
+  preview: {
+    allowedHosts: [
+      ".manuspre.computer",
+      ".manus.computer",
+      ".manus-asia.computer",
+      ".manuscomputer.ai",
+      ".manusvm.computer",
+      ".twc1.net",
+      "localhost",
+      "127.0.0.1",
+    ],
   },
 });
 

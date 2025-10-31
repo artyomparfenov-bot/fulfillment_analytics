@@ -2,6 +2,17 @@ import Papa from 'papaparse';
 import { parseISO, differenceInDays, subDays, parse } from 'date-fns';
 import type { OrderRecord, PartnerStats, SKUStats, Alert, DirectionStats, ChurnPattern } from './types';
 
+function robustParseDate(dateStr: any): Date | null {
+  if (!dateStr) return null;
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return null;
+    return date;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Flexible date parser that handles multiple formats
 function parseFlexibleDate(dateStr: string): Date {
   if (!dateStr) throw new Error('Empty date string');
@@ -41,6 +52,45 @@ function parseFlexibleDate(dateStr: string): Date {
   throw new Error(`Unable to parse date: ${dateStr}`);
 }
 
+
+let cachedSnapshotDate: Date | null = null;
+
+export function getSnapshotDate(): Date {
+  if (cachedSnapshotDate) return cachedSnapshotDate;
+  return new Date();
+}
+
+export function setSnapshotDate(date: Date): void {
+  cachedSnapshotDate = date;
+}
+
+export function calculateSnapshotDate(records: OrderRecord[]): Date {
+  if (records.length === 0) return new Date();
+  
+  let maxDate = new Date(0);
+  
+  records.forEach(record => {
+    try {
+      const orderDateStr = record["Дата заказа (orders)"];
+      if (orderDateStr) {
+        const orderDate = parseFlexibleDate(String(orderDateStr));
+        if (!isNaN(orderDate.getTime()) && orderDate > maxDate) {
+          maxDate = orderDate;
+        }
+      }
+    } catch (e) {
+      // Skip invalid dates
+    }
+  });
+  
+  if (maxDate.getTime() === new Date(0).getTime()) {
+    return new Date();
+  }
+  
+  cachedSnapshotDate = maxDate;
+  return maxDate;
+}
+
 export async function loadCSVData(): Promise<OrderRecord[]> {
   const response = await fetch('/data_merged.csv');
   const csvText = await response.text();
@@ -63,7 +113,8 @@ export async function loadCSVData(): Promise<OrderRecord[]> {
 export function filterByTimeRange(records: OrderRecord[], days: number | null): OrderRecord[] {
   if (days === null) return records;
   
-  const cutoffDate = subDays(new Date(), days);
+  const snapshotDate = getSnapshotDate();
+  const cutoffDate = subDays(snapshotDate, days);
   return records.filter(record => {
     try {
       const dateStr = record["Дата заказа (orders)"];
@@ -184,6 +235,17 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
     // Calculate volatility
     const volatility = coefficientOfVariation(dailyOrderCounts);
     
+    // Calculate SKU changes (average vs current)
+    const last30DaysRecords = filterByTimeRange(partnerRecords, 30);
+    const previous30DaysRecords = partnerRecords.filter(r => {
+      const date = parseISO(r["Дата заказа (orders)"]);
+      const cutoffStart = subDays(now, 60);
+      const cutoffEnd = subDays(now, 30);
+      return date >= cutoffStart && date < cutoffEnd;
+    });
+    const avgSKU = previous30DaysRecords.length > 0 ? new Set(previous30DaysRecords.map(r => r["Артикул"])).size : uniqueSKU;
+    const skuChange = avgSKU > 0 ? ((uniqueSKU - avgSKU) / avgSKU) * 100 : 0;
+    
     // Determine if active (ordered in last 30 days)
     const isActive = daysSinceLastOrder <= 30;
     
@@ -213,33 +275,38 @@ export function calculatePartnerStats(records: OrderRecord[]): PartnerStats[] {
           metric: 'order_decline',
           value: decline
         });
-        churnRisk += 30;
+        churnRisk += 35;
       }
     }
     
-    // Check for increased interval
-    if (daysSinceLastOrder > orderFrequency * 1.5) {
+    // Check for increased interval (higher sensitivity)
+    const intervalRiskFactor = Math.min(50, Math.max(0, (daysSinceLastOrder - orderFrequency) / orderFrequency * 30));
+    if (daysSinceLastOrder > orderFrequency * 1.2) {
       alerts.push({
         type: 'partner',
-        severity: 'medium',
+        severity: daysSinceLastOrder > orderFrequency * 2 ? 'high' : 'medium',
         message: `Интервал с последнего заказа (${daysSinceLastOrder} дней) превышает медианный (${orderFrequency.toFixed(1)} дней)`,
         metric: 'order_interval',
         value: daysSinceLastOrder,
-        threshold: orderFrequency * 1.5
+        threshold: orderFrequency * 1.2
       });
-      churnRisk += 25;
+      churnRisk += intervalRiskFactor;
     }
     
-    // Check for low SKU count
-    if (uniqueSKU < 3 && partnerRecords.length > 10) {
+    // Check for SKU decline (higher sensitivity)
+    if (skuChange < -20) {
+      const skuRiskFactor = Math.min(40, Math.abs(skuChange) / 2);
       alerts.push({
         type: 'partner',
-        severity: 'low',
-        message: `Низкое количество активных SKU (${uniqueSKU})`,
-        metric: 'sku_count',
-        value: uniqueSKU
+        severity: 'high',
+        message: `Падение SKU на ${Math.abs(skuChange).toFixed(0)}% (было ${avgSKU}, стало ${uniqueSKU})`,
+        metric: 'sku_decline',
+        value: skuChange
       });
-      churnRisk += 15;
+      churnRisk += skuRiskFactor;
+    } else if (skuChange < -10) {
+      const skuRiskFactor = Math.abs(skuChange) / 2;
+      churnRisk += skuRiskFactor;
     }
     
     // Check for high volatility
@@ -422,6 +489,38 @@ export function calculateDirectionStats(records: OrderRecord[]): DirectionStats[
   });
   
   return stats.sort((a, b) => b.totalOrders - a.totalOrders);
+}
+
+
+export function diagnosticPhase3(allData: OrderRecord[], snapshotDate: Date) {
+  const orderDates = allData.map(r => {
+    try {
+      const dateStr = r['Дата заказа (orders)'];
+      return dateStr ? new Date(dateStr) : null;
+    } catch { return null; }
+  }).filter((d): d is Date => d !== null && !isNaN(d.getTime()));
+  
+  const maxOrderDate = orderDates.length > 0 ? new Date(Math.max(...orderDates.map(d => d!.getTime()))) : null;
+  const dayDiff = maxOrderDate && snapshotDate ? Math.floor((snapshotDate.getTime() - maxOrderDate.getTime()) / (1000 * 60 * 60 * 24)) : -1;
+  
+  const phase3Report = {
+    snapshotDate: snapshotDate.toISOString().split('T')[0],
+    maxOrderDate: maxOrderDate ? maxOrderDate.toISOString().split('T')[0] : 'N/A',
+    dayDifference: dayDiff,
+    offByOneRisk: dayDiff > 1 ? 'YES - check period logic' : 'OK',
+    snapshotIncluded: dayDiff <= 1 ? 'YES' : 'NO'
+  };
+
+  console.log('=== PHASE 3: Date & Snapshot Handling ===');
+  console.table(phase3Report);
+  return phase3Report;
+}
+
+
+
+export function getDirectionLabel(direction: string | undefined): string {
+  if (!direction || direction === 'undefined' || direction === '') return 'Прочее';
+  return direction;
 }
 
 export function analyzeSuccessPatterns(partnerStats: PartnerStats[]): {

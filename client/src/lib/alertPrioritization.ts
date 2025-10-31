@@ -9,6 +9,7 @@ export interface PrioritizedAlert {
   id: string;
   partnerId: string;
   partnerName: string;
+  sku?: string;
   alertType: AlertCategory;
   severity: AlertSeverity;
   priorityScore: number; // 0-100, higher = more critical
@@ -16,6 +17,7 @@ export interface PrioritizedAlert {
   
   // Business impact metrics
   customerSize: CustomerSize;
+  size?: CustomerSize; // Alias for customerSize
   churnRisk: number; // 0-100
   
   // Alert details
@@ -142,7 +144,7 @@ export function groupAndPrioritizeAlerts(
   const grouped = new Map<string, PrioritizedAlert[]>();
   
   alerts.forEach(alert => {
-    const key = `${alert.alertType}_${alert.severity}`;
+    const key = `${alert.alertType}||${alert.severity}`;
     if (!grouped.has(key)) {
       grouped.set(key, []);
     }
@@ -151,14 +153,14 @@ export function groupAndPrioritizeAlerts(
   
   // Create groups and sort by priority
   const groups: AlertGroup[] = Array.from(grouped.entries()).map(([key, groupAlerts]) => {
-    const [category, severity] = key.split('_') as [AlertCategory, AlertSeverity];
+    const [category, severity] = key.split('||') as [AlertCategory, AlertSeverity];
     
     // Sort alerts within group by priority score
     const sorted = [...groupAlerts].sort((a, b) => b.priorityScore - a.priorityScore);
     
     return {
-      category,
-      severity,
+      category: category as AlertCategory,
+      severity: severity as AlertSeverity,
       alerts: sorted,
       count: sorted.length,
       totalPriorityScore: sorted.reduce((sum, a) => sum + a.priorityScore, 0)
@@ -173,10 +175,19 @@ export function groupAndPrioritizeAlerts(
     'LOW': 3
   };
   
-  return groups.sort((a, b) => {
+  const sorted = groups.sort((a, b) => {
     const severityDiff = severityOrder[a.severity] - severityOrder[b.severity];
     if (severityDiff !== 0) return severityDiff;
     return b.totalPriorityScore - a.totalPriorityScore;
+  });
+  
+  // Remove duplicates by checking if this is the first occurrence of this category+severity
+  const seen = new Set<string>();
+  return sorted.filter(group => {
+    const key = `${group.category}||${group.severity}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 

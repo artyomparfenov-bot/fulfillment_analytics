@@ -1,6 +1,12 @@
 import { parseISO, differenceInDays, subDays, startOfMonth, format, parse } from 'date-fns';
 import type { OrderRecord, PartnerStats } from './types';
 
+function cvToStability(cv: number): { label: string; color: string } {
+  if (cv <= 0.25) return { label: 'Стабильно', color: 'text-green-400' };
+  if (cv <= 0.5) return { label: 'Умеренно', color: 'text-yellow-400' };
+  return { label: 'Волатильно', color: 'text-red-400' };
+}
+
 // Flexible date parser that handles multiple formats
 function parseFlexibleDate(dateStr: string): Date {
   if (!dateStr) throw new Error('Empty date string');

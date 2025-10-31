@@ -1,6 +1,7 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { BarChart3, Users, Package, TrendingDown, AlertTriangle, Database } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
+import { getSnapshotDate } from '@/lib/dataProcessor';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -8,6 +9,19 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [location] = useLocation();
+  const [snapshotDate, setSnapshotDate] = useState<string>('неизвестна');
+  
+  useEffect(() => {
+    const date = getSnapshotDate();
+    if (date && date.getTime() !== new Date().getTime()) {
+      const formatted = new Intl.DateTimeFormat('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }).format(date);
+      setSnapshotDate(formatted);
+    }
+  }, []);
   
   const navItems = [
     { path: '/', icon: BarChart3, label: 'Обзор' },
@@ -54,8 +68,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         
         <div className="p-4 border-t border-sidebar-border">
           <div className="text-xs text-muted-foreground">
-            <p>Данные обновлены</p>
-            <p className="font-medium text-sidebar-foreground mt-1">24 октября 2025</p>
+            <p>Дата среза данных:</p>
+            <p className="font-medium text-sidebar-foreground mt-1">{snapshotDate}</p>
           </div>
         </div>
       </aside>

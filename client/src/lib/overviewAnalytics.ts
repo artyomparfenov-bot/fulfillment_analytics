@@ -272,6 +272,33 @@ export function segmentClientsByAge(
 /**
  * Find top and bottom performers with change metrics
  */
+
+export function diagnosticPhase4(timeSeriesData: TimeSeriesData[]) {
+  const directions = new Map<string, number>();
+  const emptyLabels = new Map<string, number>();
+  
+  timeSeriesData.forEach(d => {
+    if (!d.direction || d.direction === 'undefined' || d.direction === '') {
+      emptyLabels.set('empty_or_undefined', (emptyLabels.get('empty_or_undefined') || 0) + 1);
+    } else {
+      directions.set(d.direction, (directions.get(d.direction) || 0) + 1);
+    }
+  });
+
+  const phase4Report = {
+    totalDataPoints: timeSeriesData.length,
+    uniqueDirections: directions.size,
+    directionsFound: Array.from(directions.entries()).map(([label, count]) => ({ label, count })),
+    emptyLabels: emptyLabels.size > 0 ? Object.fromEntries(emptyLabels) : 'NONE',
+    chartDataHealth: emptyLabels.size > 0 ? 'DEGRADED - empty labels found' : 'OK'
+  };
+
+  console.log('=== PHASE 4: Chart Data Validation ===');
+  console.table(phase4Report);
+  return phase4Report;
+}
+
+
 export function findTopBottomPerformers(
   data: OrderRecord[],
   selectedDirection: string = 'all',

@@ -206,7 +206,7 @@ export function detectSKUAnomalies(
         alertType: 'sku_churn',
         severity: 'high',
         timeframe: '30d',
-        message: `SKU отвалился: ${daysSinceLastOrder} дней без заказов`,
+          message: `SKU ${sku} отвалился: ${daysSinceLastOrder} дней без заказов`,
         currentValue: daysSinceLastOrder.toString(),
         direction: 'up',
       });
@@ -231,7 +231,7 @@ export function detectSKUAnomalies(
           alertType: 'order_decline',
           severity: 'medium',
           timeframe: '7d',
-          message: `SKU заказов упали на ${Math.abs(decline).toFixed(1)}%`,
+          message: `SKU ${sku} заказов упали на ${Math.abs(decline).toFixed(1)}%`,
           benchmarkValue: orders30d.length.toString(),
           currentValue: orders7d.length.toString(),
           percentageChange: decline.toFixed(1),

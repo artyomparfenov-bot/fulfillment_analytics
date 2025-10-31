@@ -2,12 +2,47 @@ import { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import FilterBar from '@/components/FilterBar';
 import AlertBadge from '@/components/AlertBadge';
+import { PartnerSignalsPanel } from '@/components/PartnerSignalsPanel';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
-import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats } from '@/lib/dataProcessor';
+import { loadCSVData, filterByTimeRange, filterByDirection, getDirections, calculatePartnerStats, calculateSnapshotDate, setSnapshotDate } from '@/lib/dataProcessor';
 import type { OrderRecord, TimeRange, PartnerStats } from '@/lib/types';
+
+function getPartnerIdFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const partnerId = params.get('partnerId');
+  return partnerId ? decodeURIComponent(partnerId) : null;
+}
+
+function getValidPartner(allPartners: PartnerStats[], urlPartnerId: string | null): PartnerStats | null {
+  if (!urlPartnerId) return null;
+  const found = allPartners.find(p => p.partner === urlPartnerId);
+  return found || null;
+}
+
+function calculateActiveSKUDelta(partner: string, filteredData: OrderRecord[], allTimeData: OrderRecord[]): { prev: number; curr: number; delta: number } {
+  const getActiveSKUs = (data: OrderRecord[]) => {
+    const skus = new Set<string>();
+    data.filter(r => r['Партнер'] === partner).forEach(r => {
+      const sku = r['Артикул'];
+      if (sku) skus.add(String(sku));
+    });
+    return skus.size;
+  };
+  
+  const curr = getActiveSKUs(filteredData);
+  const prev = getActiveSKUs(allTimeData);
+  
+  return { prev, curr, delta: curr - prev };
+}
+
+function cvToStability(cv: number): { label: string; color: string } {
+  if (cv <= 0.25) return { label: 'Стабильно', color: 'text-green-400' };
+  if (cv <= 0.5) return { label: 'Умеренно', color: 'text-yellow-400' };
+  return { label: 'Волатильно', color: 'text-red-400' };
+}
 
 export default function Partners() {
   const [allData, setAllData] = useState<OrderRecord[]>([]);
@@ -20,6 +55,8 @@ export default function Partners() {
   
   useEffect(() => {
     loadCSVData().then(data => {
+      const snapshotDate = calculateSnapshotDate(data);
+      setSnapshotDate(snapshotDate);
       setAllData(data);
       setDirections(getDirections(data));
       setLoading(false);
